@@ -4037,70 +4037,98 @@ class RoomClient {
         if (evt.data && evt.data.size > 0) recordedBlobs.push(evt.data);
     }
 
-    handleMediaRecorderStop(evt) {
+    // handleMediaRecorderStop(evt) {
+    //     try {
+    //         console.log('MediaRecorder stopped: ', evt);
+    //         console.log('MediaRecorder Blobs: ', recordedBlobs);
+
+    //         const dateTime = getDataTimeString();
+    //         const type = recordedBlobs[0].type.includes('mp4') ? 'mp4' : 'webm';
+    //         const blob = new Blob(recordedBlobs, { type: 'video/' + type });
+    //         const recFileName = `${dateTime}-REC.${type}`;
+    //         const currentDevice = DetectRTC.isMobileDevice ? 'MOBILE' : 'PC';
+    //         const blobFileSize = bytesToSize(blob.size);
+    //         const recTime = document.getElementById('recordingStatus');
+
+    //         const recordingInfo = `
+    //         <br/><br/>
+    //         <ul>
+    //             <li>Time: ${recTime.innerText}</li>
+    //             <li>File: ${recFileName}</li>
+    //             <li>Codecs: ${recCodecs}</li>
+    //             <li>Size: ${blobFileSize}</li>
+    //         </ul>
+    //         <br/>
+    //         `;
+
+    //         const lastRecordingInfo = document.getElementById('lastRecordingInfo');
+    //         lastRecordingInfo.style.color = '#FFFFFF';
+    //         lastRecordingInfo.innerHTML = `Last Recording Info: ${recordingInfo}`;
+    //         show(lastRecordingInfo);
+
+    //         if (window.localStorage.isReconnected === 'false') {
+    //             Swal.fire({
+    //                 background: swalBackground,
+    //                 position: 'center',
+    //                 icon: 'success',
+    //                 title: 'Recording',
+    //                 html: `<div style="text-align: left;">
+    //                 🔴 Recording Info: 
+    //                 ${recordingInfo}
+    //                 Please wait to be processed, then will be downloaded to your ${currentDevice} device.
+    //                 </div>`,
+    //                 showClass: { popup: 'animate__animated animate__fadeInDown' },
+    //                 hideClass: { popup: 'animate__animated animate__fadeOutUp' },
+    //             });
+    //         }
+
+    //         console.log('MediaRecorder Download Blobs');
+    //         const url = window.URL.createObjectURL(blob);
+
+    //         const downloadLink = document.createElement('a');
+    //         downloadLink.style.display = 'none';
+    //         downloadLink.href = url;
+    //         downloadLink.download = recFileName;
+    //         document.body.appendChild(downloadLink);
+    //         downloadLink.click();
+
+    //         setTimeout(() => {
+    //             document.body.removeChild(downloadLink);
+    //             window.URL.revokeObjectURL(url);
+    //             console.log(`🔴 Recording FILE: ${recFileName} done 👍`);
+    //             recordedBlobs = [];
+    //             recTime.innerText = '0s';
+    //         }, 100);
+    //     } catch (err) {
+    //         console.error('Recording save failed', err);
+    //     }
+    // }
+    
+    async handleMediaRecorderStop(evt) {
         try {
-            console.log('MediaRecorder stopped: ', evt);
-            console.log('MediaRecorder Blobs: ', recordedBlobs);
+            console.log('MediaRecorder stopped:', evt);
+            console.log('MediaRecorder Blobs:', recordedBlobs);
 
             const dateTime = getDataTimeString();
-            const type = recordedBlobs[0].type.includes('mp4') ? 'mp4' : 'webm';
-            const blob = new Blob(recordedBlobs, { type: 'video/' + type });
-            const recFileName = `${dateTime}-REC.${type}`;
-            const currentDevice = DetectRTC.isMobileDevice ? 'MOBILE' : 'PC';
-            const blobFileSize = bytesToSize(blob.size);
-            const recTime = document.getElementById('recordingStatus');
+            const type = recordedBlobs[0]?.type?.includes('mp4') ? 'mp4' : 'webm'; // Use optional chaining for safety
+            const blob = new Blob(recordedBlobs, { type: `video/${type}` });
 
-            const recordingInfo = `
-            <br/><br/>
-            <ul>
-                <li>Time: ${recTime.innerText}</li>
-                <li>File: ${recFileName}</li>
-                <li>Codecs: ${recCodecs}</li>
-                <li>Size: ${blobFileSize}</li>
-            </ul>
-            <br/>
-            `;
+            const formData = new FormData();
+            formData.append('recording', blob, `${dateTime}-REC.${type}`);
 
-            const lastRecordingInfo = document.getElementById('lastRecordingInfo');
-            lastRecordingInfo.style.color = '#FFFFFF';
-            lastRecordingInfo.innerHTML = `Last Recording Info: ${recordingInfo}`;
-            show(lastRecordingInfo);
+            const response = await fetch('https://live.viasacademy.in/upload', {
+                method: 'POST',
+                body: formData,
+            });
 
-            if (window.localStorage.isReconnected === 'false') {
-                Swal.fire({
-                    background: swalBackground,
-                    position: 'center',
-                    icon: 'success',
-                    title: 'Recording',
-                    html: `<div style="text-align: left;">
-                    🔴 Recording Info: 
-                    ${recordingInfo}
-                    Please wait to be processed, then will be downloaded to your ${currentDevice} device.
-                    </div>`,
-                    showClass: { popup: 'animate__animated animate__fadeInDown' },
-                    hideClass: { popup: 'animate__animated animate__fadeOutUp' },
-                });
+            if (!response.ok) {
+                throw new Error(`Failed to upload recording. Status: ${response.status}`);
             }
 
-            console.log('MediaRecorder Download Blobs');
-            const url = window.URL.createObjectURL(blob);
-
-            const downloadLink = document.createElement('a');
-            downloadLink.style.display = 'none';
-            downloadLink.href = url;
-            downloadLink.download = recFileName;
-            document.body.appendChild(downloadLink);
-            downloadLink.click();
-
-            setTimeout(() => {
-                document.body.removeChild(downloadLink);
-                window.URL.revokeObjectURL(url);
-                console.log(`🔴 Recording FILE: ${recFileName} done 👍`);
-                recordedBlobs = [];
-                recTime.innerText = '0s';
-            }, 100);
+            const data = await response.json();
+            console.log('Server response:', data);
         } catch (err) {
-            console.error('Recording save failed', err);
+            console.error('Error handling recording:', err);
         }
     }
 
